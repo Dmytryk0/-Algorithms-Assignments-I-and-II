@@ -7,14 +7,13 @@
 
 using namespace std;
 
-// Credit card record
+// Main structure for start
 struct CardRecord {
-    string rawData;   // Original data
-    int sortKey;      // Sorting key (Date + PIN)
+    long long sortKey; // Date + PIN combined
 };
 
-// Counting sort used by Radix Sort
-void countingSortForRadix(vector<CardRecord>& arr, int exp) {
+// --- 1. Linear Radix Sort ---
+void countingSort(vector<CardRecord>& arr, long long exp) {
     int n = arr.size();
     vector<CardRecord> output(n);
     int count[10] = {0};
@@ -26,69 +25,70 @@ void countingSortForRadix(vector<CardRecord>& arr, int exp) {
         count[i] += count[i - 1];
 
     for (int i = n - 1; i >= 0; i--) {
-        int digit = (arr[i].sortKey / exp) % 10;
-        output[count[digit] - 1] = arr[i];
-        count[digit]--;
+        output[count[(arr[i].sortKey / exp) % 10] - 1] = arr[i];
+        count[(arr[i].sortKey / exp) % 10]--;
     }
 
     for (int i = 0; i < n; i++)
         arr[i] = output[i];
 }
 
-// Radix Sort — linear time algorithm
 void radixSort(vector<CardRecord>& arr) {
-    int maxVal = 99999999; // MMYY + PIN (8 digits)
-    for (int exp = 1; maxVal / exp > 0; exp *= 10)
-        countingSortForRadix(arr, exp);
+    long long maxVal = 99999999; // Max 8 digits
+    for (long long exp = 1; maxVal / exp > 0; exp *= 10)
+        countingSort(arr, exp);
 }
 
-// Generate test data
-vector<CardRecord> generateOlsenData(int size) {
-    vector<CardRecord> data(size);
-    mt19937 gen(random_device{}());
-    uniform_int_distribution<> dateDist(1024, 1230);
-    uniform_int_distribution<> pinDist(1000, 9999);
+// --- 2. Log-Linear Standard Sort ---
+bool compareRecords(const CardRecord& a, const CardRecord& b) {
+    return a.sortKey < b.sortKey;
+}
 
-    for (int i = 0; i < size; i++) {
-        int date = dateDist(gen);
-        int pin = pinDist(gen);
-        data[i].sortKey = date * 10000 + pin;
-        data[i].rawData =
-            "Card_" + to_string(i) + "," +
-            to_string(date) + "," +
-            to_string(pin);
+// Data Generator
+vector<CardRecord> generateData(int size) {
+    vector<CardRecord> data(size);
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dateDist(1024, 1230);
+    uniform_int_distribution<int> pinDist(1000, 9999);
+    
+    for(int i = 0; i < size; i++) {
+        long long date = dateDist(gen);
+        long long pin = pinDist(gen);
+        data[i].sortKey = date * 10000 + pin; 
     }
     return data;
 }
 
 int main() {
-    int size = 20000;
-    cout << "Generating " << size << " records..." << endl;
+    // Test with great numbers
+    vector<int> sizes = {10000, 50000, 100000, 500000, 1000000};
+    
+    cout << "Algorithm,Size,Time(seconds)" << endl;
 
-    vector<CardRecord> data = generateOlsenData(size);
+    for (int n : sizes) {
+        vector<CardRecord> data = generateData(n);
+        
+        // 1. Test Radix Sort (Linear)
+        {
+            vector<CardRecord> copy = data;
+            auto start = chrono::high_resolution_clock::now();
+            radixSort(copy);
+            auto end = chrono::high_resolution_clock::now();
+            chrono::duration<double> diff = end - start;
+            cout << "LinearSort(Radix)," << n << "," << diff.count() << endl;
+        }
 
-    cout << "Starting Radix Sort..." << endl;
-    auto start = chrono::high_resolution_clock::now();
-
-    radixSort(data);
-
-    auto end = chrono::high_resolution_clock::now();
-    chrono::duration<double> diff = end - start;
-
-    cout << "Sorted " << size << " records in "
-         << diff.count() << " seconds." << endl;
-
-    bool sorted = true;
-    for (size_t i = 0; i + 1 < data.size(); i++) {
-        if (data[i].sortKey > data[i + 1].sortKey) {
-            sorted = false;
-            break;
+        // 2. Test Standard Sort (O(N log N))
+        {
+            vector<CardRecord> copy = data;
+            auto start = chrono::high_resolution_clock::now();
+            sort(copy.begin(), copy.end(), compareRecords);
+            auto end = chrono::high_resolution_clock::now();
+            chrono::duration<double> diff = end - start;
+            cout << "StdSort(Quick)," << n << "," << diff.count() << endl;
         }
     }
-
-    cout << (sorted ? "SUCCESS: Data is sorted correctly!"
-                    : "ERROR: Sorting failed.")
-         << endl;
 
     return 0;
 }
