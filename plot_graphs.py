@@ -2,21 +2,19 @@ import subprocess
 import matplotlib.pyplot as plt
 import os
 
-# Ways to progs
 PROGRAMS = {
     "sorting": "assignment1/task1/task_a/sorter",
     "olsen": "assignment1/task1/task_b/olsen",
     "vector": "assignment1/task2/vector_test",
+    "pivots": "assignment1/task3/pivots",
     "bst": "assignment2/task1/bst_test"
 }
 
 def run_cpp(path):
     if not os.path.exists(path):
-        # Fallback for BST if using the copied version
         if "bst_test" in path and os.path.exists("assignment2/task2/bst_test"):
             path = "assignment2/task2/bst_test"
         else:
-            print(f"Skipping {path} (not found)")
             return ""
     try:
         return subprocess.run([path], capture_output=True, text=True).stdout
@@ -34,55 +32,35 @@ def plot_lines(output, filename, title, ylabel="Time (s)"):
                 data[name].append((size, time))
     
     if not data: return
-
     plt.figure(figsize=(10, 6))
     for name, points in data.items():
         points.sort()
         plt.plot([p[0] for p in points], [p[1] for p in points], marker='o', label=name)
-    
-    plt.title(title)
-    plt.xlabel("Input Size (N)")
-    plt.ylabel(ylabel)
-    plt.legend()
-    plt.grid(True)
-    plt.savefig(filename)
-    plt.close()
+    plt.title(title); plt.xlabel("Input Size (N)"); plt.ylabel(ylabel)
+    plt.legend(); plt.grid(True)
+    plt.savefig(filename); plt.close()
     print(f"Generated {filename}")
 
 def plot_bars(output, filename, title):
     names, times = [], []
     for line in output.splitlines():
-        # Parsing CSV-like: Name,Time OR Name Time
         parts = line.split(',') if ',' in line else line.split()
         if len(parts) >= 2 and "Container" not in parts[0] and "Operation" not in parts[0]:
             try:
-                names.append(parts[0].strip())
-                times.append(float(parts[1]))
+                names.append(parts[0].strip()); times.append(float(parts[1]))
             except: pass
-
     if not names: return
-
-    plt.figure(figsize=(10, 6))
-    plt.bar(names, times, color=['skyblue', 'salmon', 'lightgreen', 'orange'])
-    plt.title(title)
-    plt.ylabel("Time (seconds)")
-    plt.grid(axis='y')
-    plt.savefig(filename)
-    plt.close()
+    plt.figure(figsize=(10, 6)); plt.bar(names, times, color=['skyblue', 'salmon', 'lightgreen'])
+    plt.title(title); plt.ylabel("Time (s)"); plt.grid(axis='y')
+    plt.savefig(filename); plt.close()
     print(f"Generated {filename}")
 
 def main():
-    # 1. Sorting (Task 1A)
-    plot_lines(run_cpp(PROGRAMS["sorting"]), "graph_sorting.png", "Sorting Algorithms Comparison")
-    
-    # 2. Olsen (Task 1B)
-    plot_lines(run_cpp(PROGRAMS["olsen"]), "graph_olsen.png", "Linear (Radix) vs Log-Linear (Quick) Sort")
-
-    # 3. Vector (Task 2)
-    plot_bars(run_cpp(PROGRAMS["vector"]), "graph_vector.png", "Vector vs List Append Time (1M elements)")
-
-    # 4. Trees (Assign 2)
-    plot_bars(run_cpp(PROGRAMS["bst"]), "graph_trees.png", "BST Operations Performance")
+    plot_lines(run_cpp(PROGRAMS["sorting"]), "graph_sorting.png", "Sorting Algorithms")
+    plot_lines(run_cpp(PROGRAMS["olsen"]), "graph_olsen.png", "Radix vs Quick Sort")
+    plot_bars(run_cpp(PROGRAMS["vector"]), "graph_vector.png", "Vector vs List Append")
+    plot_lines(run_cpp(PROGRAMS["pivots"]), "graph_pivots.png", "1-Pivot vs 2-Pivot QuickSort") 
+    plot_bars(run_cpp(PROGRAMS["bst"]), "graph_trees.png", "BST Operations")
 
 if __name__ == "__main__":
     main()
